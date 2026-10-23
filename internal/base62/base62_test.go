@@ -2,6 +2,7 @@ package base62
 
 import (
 	"errors"
+	"math"
 	"strings"
 	"testing"
 )
@@ -60,5 +61,33 @@ func TestDecodeErrors(t *testing.T) {
 	// A multi-byte character must be rejected, not split into bytes.
 	if _, err := Decode("café"); !errors.Is(err, ErrInvalidCharacter) {
 		t.Errorf("Decode of a non-ASCII code returned %v, want ErrInvalidCharacter", err)
+	}
+}
+
+func TestEncodeRecursive(t *testing.T) {
+	values := []uint64{
+		0,
+		1,
+		9,
+		10,
+		35,
+		36,
+		61,
+		62,
+		125,
+		3844,
+		math.MaxUint64,
+	}
+
+	for _, v := range values {
+		got := EncodeRecursive(v)
+		want := Encode(v)
+
+		if got != want {
+			t.Errorf(
+				"EncodeRecursive(%d) = %q, want %q",
+				v, got, want,
+			)
+		}
 	}
 }

@@ -32,6 +32,15 @@ func Encode(v uint64) string {
 	return string(buf[i:])
 }
 
+// EncodeRecursive renders a number in Base62 using recursion.
+func EncodeRecursive(v uint64) string {
+	if v < 62 {
+		return string(alphabet[v])
+	}
+
+	return EncodeRecursive(v/62) + string(alphabet[v%62])
+}
+
 // EncodeWidth encodes v and left-pads it with zeroes to at least width characters.
 // The encoded value is never truncated.
 func EncodeWidth(v uint64, width int) string {
