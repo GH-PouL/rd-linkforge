@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"sort"
 
@@ -22,7 +23,7 @@ func New() Store {
 }
 
 // Add adds a link unless its ID is already taken.
-func Add(s Store, l link.Link) error {
+func (s *Store) Add(l link.Link) error {
 	if _, exists := s.byID[l.ID]; exists {
 		return ErrDuplicateID
 	}
@@ -31,14 +32,94 @@ func Add(s Store, l link.Link) error {
 	return nil
 }
 
+// Create persists a link and returns the stored value.
+func (s *Store) Create(ctx context.Context, l link.Link) (link.Link, error) {
+	if err := ctx.Err(); err != nil {
+		return link.Link{}, err
+	}
+
+	if err := s.Add(l); err != nil {
+		return link.Link{}, err
+	}
+
+	return l, nil
+}
+
+// ByCode returns a link by its short code.
+func (s *Store) ByCode(ctx context.Context, code string) (link.Link, error) {
+	if err := ctx.Err(); err != nil {
+		return link.Link{}, err
+	}
+
+	for _, l := range s.byID {
+		if l.Code == code {
+			return l, nil
+		}
+	}
+
+	return link.Link{}, link.ErrNotFound
+}
+
+// ListByOwner returns a page of links belonging to the specified owner.
+func (s *Store) ListByOwner(
+	ctx context.Context,
+	ownerID string,
+	page link.Page,
+) ([]link.Link, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	page = page.Normalize()
+
+	afterID, err := page.AfterID()
+	if err != nil {
+		return nil, err
+	}
+
+	links := make([]link.Link, 0)
+
+	for _, l := range s.byID {
+		if l.OwnerID == ownerID && l.ID > afterID {
+			links = append(links, l)
+		}
+	}
+
+	sort.Slice(links, func(i, j int) bool {
+		return links[i].ID < links[j].ID
+	})
+
+	if len(links) > page.Limit {
+		links = links[:page.Limit]
+	}
+
+	return links, nil
+}
+
+// Delete removes a link by its ID.
+func (s *Store) Delete(ctx context.Context, id uint64) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	if _, exists := s.byID[id]; !exists {
+		return link.ErrNotFound
+	}
+
+	delete(s.byID, id)
+	return nil
+}
+
+var _ link.Store = (*Store)(nil)
+
 // Get returns a link and reports whether it was found.
-func Get(s Store, id uint64) (link.Link, bool) {
+func (s *Store) Get(id uint64) (link.Link, bool) {
 	l, ok := s.byID[id]
 	return l, ok
 }
 
 // All returns links sorted by ID in ascending order.
-func All(s Store) []link.Link {
+func (s *Store) All() []link.Link {
 	links := make([]link.Link, 0, len(s.byID))
 
 	for _, l := range s.byID {
@@ -53,6 +134,6 @@ func All(s Store) []link.Link {
 }
 
 // Count returns the number of stored links.
-func Count(s Store) int {
+func (s *Store) Count() int {
 	return len(s.byID)
 }

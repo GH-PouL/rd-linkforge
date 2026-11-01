@@ -19,7 +19,7 @@ func main() {
 			continue
 		}
 
-		if err := store.Add(s, l); err != nil {
+		if err := s.Add(l); err != nil {
 			fmt.Fprintf(os.Stderr, "cannot store URL %q: %v\n", target, err)
 			continue
 		}
@@ -28,5 +28,5 @@ func main() {
 		nextID++
 	}
 
-	fmt.Printf("\nTotal: %d\n", store.Count(s))
+	fmt.Printf("\nTotal: %d\n", s.Count())
 }
