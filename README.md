@@ -76,3 +76,23 @@ Requires Go 1.25+. Linting uses [golangci-lint](https://golangci-lint.run) (`bre
 | M8 | 15–16 | `net/http` first, then a framework; REST and Swagger |
 | M9 | 17–19 | Validation, JWT and middleware, WebSockets |
 | M10 | 20–21 | Production hardening and project defence |
+
+
+## Shortener Service
+
+The Shortener service provides four operations:
+
+- `Shorten` — creates a short link with a generated code or custom alias.
+- `Resolve` — retrieves a link by code and checks its expiration.
+- `List` — lists links by owner with cursor-based pagination.
+- `Delete` — removes a link after verifying ownership.
+
+The service uses the `link.Store` interface and an in-memory implementation.
+
+## Testing
+
+Run all tests:
+
+```bash
+go test ./...
+
