@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestAliasError(t *testing.T) {
+func TestAliasErrorCustom(t *testing.T) {
 	err := &AliasError{
 		Alias: "google",
 		Err:   ErrAliasTaken,

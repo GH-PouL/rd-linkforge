@@ -7,7 +7,7 @@ import (
 	"github.com/skskuzan/rd-linkforge/internal/base62"
 )
 
-func TestPageNormalize(t *testing.T) {
+func TestPageNormalizeCustom(t *testing.T) {
 	tests := []struct {
 		name  string
 		limit int
@@ -41,7 +41,7 @@ func TestPageNormalize(t *testing.T) {
 	}
 }
 
-func TestPageAfterID(t *testing.T) {
+func TestPageAfterIDCustom(t *testing.T) {
 	tests := []struct {
 		name    string
 		cursor  string

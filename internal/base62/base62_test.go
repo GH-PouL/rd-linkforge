@@ -64,7 +64,7 @@ func TestDecodeErrors(t *testing.T) {
 	}
 }
 
-func TestEncodeRecursive(t *testing.T) {
+func TestEncodeRecursiveCustom(t *testing.T) {
 	values := []uint64{
 		0,
 		1,
