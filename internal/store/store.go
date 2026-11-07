@@ -16,8 +16,8 @@ type Store struct {
 }
 
 // New creates an empty store.
-func New() Store {
-	return Store{
+func New() *Store {
+	return &Store{
 		byID: make(map[uint64]link.Link),
 	}
 }
@@ -34,14 +34,17 @@ func (s *Store) Add(l link.Link) error {
 
 // Create persists a link and returns the stored value.
 func (s *Store) Create(ctx context.Context, l link.Link) (link.Link, error) {
-	if err := ctx.Err(); err != nil {
-		return link.Link{}, err
+	if _, exists := s.byID[l.ID]; exists {
+		return link.Link{}, ErrDuplicateID
 	}
 
-	if err := s.Add(l); err != nil {
-		return link.Link{}, err
+	for _, existing := range s.byID {
+		if existing.Code == l.Code {
+			return link.Link{}, link.ErrAliasTaken
+		}
 	}
 
+	s.byID[l.ID] = l
 	return l, nil
 }
 
