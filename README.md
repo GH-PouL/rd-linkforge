@@ -6,15 +6,19 @@ The design is specified in the project TDD; this repository is the skeleton it d
 
 ## Current state
 
-**Skeleton only.** Every seam in the architecture exists as an interface with a Null Object implementation that satisfies it and does nothing. Nothing is wired together and no behaviour is implemented yet — each milestone replaces one set of `Noop*` types with real ones.
+Milestones M1, M2 and M3 are implemented.
 
-Each file declares exactly one interface alongside its no-op implementation, so the compile-time contract and its placeholder stay together. Types shared by several interfaces live in the package's `model.go`.
+- M1: Base62 codec, Link model and in-memory store.
+- M2: Shortener service with Shorten, Resolve, List and Delete operations.
+- M3: Context cancellation, configurable first link ID, environment
+  configuration, JSONL/CSV file I/O and operator CLI.
 
+The remaining milestones are under development.
 ## Layout
 
 ```
-cmd/      linkforge         service binary — prints its version, nothing more
-          linkctl           operator CLI   — prints its version, nothing more
+cmd/      linkforge         service binary
+          linkctl           operator CLI: import, export, config, version
 
 pkg/                        reusable libraries — a separate Go module
   shortid/  Generator       collision-resistant code issuing           M4
@@ -35,6 +39,7 @@ internal/                   application code
   transport/Server          uniform listener lifecycle                 M6 / M8
   config/   Loader          environment-only configuration             M3
   observability/Metrics     counters and histograms                    M10
+  linkio/                   text, JSONL and CSV import/export           M3
 ```
 
 The `pkg/` tree is a second module so that reusable libraries stay free of any dependency on application code; `go.work` ties the two together for local development.
@@ -95,4 +100,23 @@ Run all tests:
 
 ```bash
 go test ./...
+```
 
+
+## Operator CLI
+
+The `linkctl` command supports four subcommands.
+
+### Version
+
+```bash
+go run ./cmd/linkctl version
+go run ./cmd/linkctl import -in urls.txt -db links.jsonl
+go run ./cmd/linkctl export -db links.jsonl
+go run ./cmd/linkctl export -db links.jsonl -out links.csv
+go run ./cmd/linkctl config
+
+go test ./...
+go vet ./...
+go test -cover ./internal/config ./internal/linkio ./cmd/linkctl
+```
