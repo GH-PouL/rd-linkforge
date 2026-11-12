@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -10,23 +11,23 @@ import (
 
 func main() {
 	s := store.New()
-	var nextID uint64 = 1
+	shortener := link.NewService(s)
+	ctx := context.Background()
 
 	for _, target := range os.Args[1:] {
-		l, err := link.New(nextID, target)
+		_, err := shortener.Shorten(ctx, link.ShortenRequest{
+			Target:  target,
+			OwnerID: "demo",
+		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "invalid URL %q: %v\n", target, err)
 			continue
 		}
-
-		if err := store.Add(s, l); err != nil {
-			fmt.Fprintf(os.Stderr, "cannot store URL %q: %v\n", target, err)
-			continue
-		}
-
-		fmt.Printf("%s  %s\n", l.Code, l.Target)
-		nextID++
 	}
 
-	fmt.Printf("\nTotal: %d\n", store.Count(s))
+	for _, l := range s.All() {
+		fmt.Printf("%s  %s\n", l.Code, l.Target)
+	}
+
+	fmt.Printf("\nTotal: %d\n", s.Count())
 }
