@@ -107,8 +107,8 @@ go test ./...
 |---|---|---|---|
 | LRU | Get | O(1) | O(n) |
 | LRU | Put | O(1) | O(n) |
-| Trie | Insert | O(L) | O(Ln) |
-| Trie | WithPrefix | O(L + k·W) | O(Ln + S) |
+| Trie | Insert | O(L) | O(L) |
+| Trie | WithPrefix | O(L + k·W) | O(L + 256·m + S) |
 | TopK | Add | O(log N) | O(log N) |
 | TopK | Result | O(N log N) | O(N log N) |
 
