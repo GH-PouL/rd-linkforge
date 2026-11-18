@@ -6,7 +6,8 @@ The design is specified in the project TDD; this repository is the skeleton it d
 
 ## Current state
 
-**Skeleton only.** Every seam in the architecture exists as an interface with a Null Object implementation that satisfies it and does nothing. Nothing is wired together and no behaviour is implemented yet — each milestone replaces one set of `Noop*` types with real ones.
+**Milestones M1–M2 and M4 are implemented.** Linkforge includes a Base62 codec, a domain Shortener service, an in-memory store, and reusable LRU cache, trie, TopK heap, and short-code generator. M3 functionality is partially implemented. The remaining milestones are still under development.
+
 
 Each file declares exactly one interface alongside its no-op implementation, so the compile-time contract and its placeholder stay together. Types shared by several interfaces live in the package's `model.go`.
 
@@ -17,8 +18,11 @@ cmd/      linkforge         service binary — prints its version, nothing more
           linkctl           operator CLI   — prints its version, nothing more
 
 pkg/                        reusable libraries — a separate Go module
-  shortid/  Generator       collision-resistant code issuing           M4
-  cache/    Cache[K,V]      bounded cache on the redirect hot path     M4
+  cache/    LRU[K,V]        bounded least-recently-used cache         M4
+  trie/     Trie            prefix index for alias autocomplete       M4
+  topk/     TopK            top-N ranking using a bounded heap        M4
+  shortid/  CodeGenerator  random Base62 short-code generator         M4
+
 
 internal/                   application code
   base62/                   base62 encode/decode                       M1
@@ -95,4 +99,42 @@ Run all tests:
 
 ```bash
 go test ./...
+```
+
+## Complexity
+
+| Structure | Operation | Average | Worst case |
+|---|---|---|---|
+| LRU | Get | O(1) | O(n) |
+| LRU | Put | O(1) | O(n) |
+| Trie | Insert | O(L) | O(Ln) |
+| Trie | WithPrefix | O(L + k·W) | O(Ln + S) |
+| TopK | Add | O(log N) | O(log N) |
+| TopK | Result | O(N log N) | O(N log N) |
+
+Here, n is the number of stored entries, L is the length of a word or prefix, k is the number of returned words, W is the average length of a returned word's suffix, S is the total work required to traverse the matching subtree, and N is the heap capacity.
+
+LRU.Get remains O(1) on average even though it updates the usage order. A hash map locates the entry, and a doubly linked list moves it to the front in constant time without scanning other entries.
+
+
+## Benchmarks
+
+Benchmarks were run on Windows (amd64) with an AMD Ryzen 7 5800X 8-Core Processor.
+
+Command:
+
+```bash
+make bench
+```
+
+Results:
+
+```text
+BenchmarkLRUGet-16            122433163       9.752 ns/op       0 B/op       0 allocs/op
+BenchmarkTrieWithPrefix-16       106575       11287 ns/op     664 B/op      16 allocs/op
+```
+
+The LRU cache hit requires no heap allocations and takes about 9.8 ns per operation. Trie prefix search takes about 11.3 microseconds and allocates memory to build the returned strings and slice.
+
+The Trie benchmark uses approximately 10,000 words and requests up to 10 matching results.
 
