@@ -13,6 +13,7 @@ import (
 // Service implements the Shortener interface.
 type Service struct {
 	store  Store
+	cache  Cache
 	nextID uint64
 	now    func() time.Time
 }
@@ -22,6 +23,12 @@ type Option func(*Service)
 func WithClock(now func() time.Time) Option {
 	return func(s *Service) {
 		s.now = now
+	}
+}
+
+func WithCache(c Cache) Option {
+	return func(s *Service) {
+		s.cache = c
 	}
 }
 
@@ -153,9 +160,31 @@ func (s *Service) Shorten(ctx context.Context, req ShortenRequest) (Link, error)
 }
 
 func (s *Service) Resolve(ctx context.Context, code string) (Link, error) {
-	l, err := s.store.ByCode(ctx, code)
-	if err != nil {
-		return Link{}, fmt.Errorf("resolve link: %w", err)
+	if err := ctx.Err(); err != nil {
+		return Link{}, err
+	}
+
+	var l Link
+
+	if s.cache != nil {
+		if cached, ok := s.cache.Get(code); ok {
+			l = cached
+		} else {
+			found, err := s.store.ByCode(ctx, code)
+			if err != nil {
+				return Link{}, fmt.Errorf("resolve link: %w", err)
+			}
+
+			l = found
+			s.cache.Put(code, l)
+		}
+	} else {
+		found, err := s.store.ByCode(ctx, code)
+		if err != nil {
+			return Link{}, fmt.Errorf("resolve link: %w", err)
+		}
+
+		l = found
 	}
 
 	if !l.ExpiresAt.IsZero() && !s.now().Before(l.ExpiresAt) {
@@ -166,6 +195,10 @@ func (s *Service) Resolve(ctx context.Context, code string) (Link, error) {
 }
 
 func (s *Service) List(ctx context.Context, ownerID string, page Page) ([]Link, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	if strings.TrimSpace(ownerID) == "" {
 		return nil, ErrEmptyOwner
 	}
@@ -179,6 +212,10 @@ func (s *Service) List(ctx context.Context, ownerID string, page Page) ([]Link, 
 }
 
 func (s *Service) Delete(ctx context.Context, ownerID, code string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	if strings.TrimSpace(ownerID) == "" {
 		return ErrEmptyOwner
 	}
@@ -194,6 +231,10 @@ func (s *Service) Delete(ctx context.Context, ownerID, code string) error {
 
 	if err := s.store.Delete(ctx, l.ID); err != nil {
 		return fmt.Errorf("delete link: %w", err)
+	}
+
+	if s.cache != nil {
+		s.cache.Delete(code)
 	}
 
 	return nil
